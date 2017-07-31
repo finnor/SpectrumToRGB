@@ -1,0 +1,22 @@
+{
+  "name": "spectrum-to-rgb",
+  "version": "1.0.0",
+  "description": "Takes an input spectrum and converts it to an RGB color",
+  "main": "bundle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adrian Flannery <aflanry@gmail.com>",
+  "license": "GPL-2.0",
+  "bugs": {
+    "url": "https://github.com/finnor/CSVSplitterJS/issues"
+  },
+  "homepage": "https://github.com/finnor/CSVSplitterJS#readme",
+  "devDependencies": {
+    "webpack": "^2.2.1"
+  },
+  "scripts": {
+    "build:dev": "./node_modules/.bin/webpack --config webpack.config.js",
+    "build:dist": "./node_modules/.bin/webpack --config webpack.config.js"
+  }
+}
