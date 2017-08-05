@@ -3,6 +3,7 @@ import RGB from "./RGB";
 import XYZ from "./XYZ";
 import CIEColorMatchingFunction from "./CIEColorMatchingFunction";
 import Spectrum from "./Spectrum";
+import * as d65 from "./Data/Illuminant/d65";
 
 /**
  * Class to convert a spectrum to an rgb
@@ -22,6 +23,9 @@ class SpectrumToRGB {
     private IlluminantEx = 0.33333333;    //CIE equal-energy illuminant
     private IlluminantEy = 0.33333333;
 
+    //The illuminant spectrum
+    private illuminantSpectrum = d65.default;
+
     //Gamma correction system
     //TODO move this to either an enum or
     //     a class with the gamma correction function
@@ -39,7 +43,7 @@ class SpectrumToRGB {
      * Takes an xyz color and returns the rgb color in the input color system
      *
      * @param  {ColorSystem} cs  The color system to render the rgb color in
-     * @param  {XYZ} xyz  The xyz color to convert from
+     * @param  {XYZ} xyz  The xyz chromaticity to convert from
      * @return {RGB} The converted rgb color
      */
     private xyzToRGB(cs: ColorSystem, xyz: XYZ): RGB
@@ -50,6 +54,7 @@ class SpectrumToRGB {
         let rw, gw, bw;
         let r, g, b;
 
+        //x + y + z = 1, therefore z = 1 - (x + y)
         xr = cs.xRed;    yr = cs.yRed;    zr = 1. - (xr + yr);
         xg = cs.xGreen;  yg = cs.yGreen;  zg = 1. - (xg + yg);
         xb = cs.xBlue;   yb = cs.yBlue;   zb = 1. - (xb + yb);
@@ -77,12 +82,7 @@ class SpectrumToRGB {
         g = (gx * xyz.x) + (gy * xyz.y) + (gz * xyz.z);
         b = (bx * xyz.x) + (by * xyz.y) + (bz * xyz.z);
 
-        let rgb = new RGB(r, g, b);
-
-        if(!this.insideGamut(rgb))
-            rgb = this.constrainRGB(rgb);
-
-        return rgb;
+        return this.constrainRGBTruncate(new RGB(r, g, b));
     }
 
    /**
@@ -92,7 +92,7 @@ class SpectrumToRGB {
     * @param  {RGB} rgb  the rgb color to test
     * @return {boolean} is the color inside the color gamut
     */
-    private insideGamut(rgb: RGB): boolean
+    public insideGamut(rgb: RGB): boolean
     {
         return (rgb.r >= 0) && (rgb.g >= 0) && (rgb.b >= 0);
     }
@@ -103,7 +103,7 @@ class SpectrumToRGB {
     * @param  {RGB} rgb  the rgb color to constrain; used as an inout parameter
     * @return {RGB} The color constrained inside the gamut
     */
-    private constrainRGB(rgb: RGB): RGB
+    private constrainRGBAddWhite(rgb: RGB): RGB
     {
         let w;
 
@@ -121,6 +121,36 @@ class SpectrumToRGB {
         if (w > 0) {
             red += w;  green += w; blue += w;
         }
+
+        return new RGB(red, green, blue);
+    }
+
+    /**
+    * Scales the rgb to max component=1 when a component is > 1 and zeros negative components
+    *
+    * @param  {RGB} rgb  the rgb color to constrain; used as an inout parameter
+    * @return {RGB} The color constrained inside the gamut
+    */
+    private constrainRGBTruncate(rgb: RGB): RGB
+    {
+        let red = rgb.r;
+        let green = rgb.g;
+        let blue = rgb.b;
+
+        //Find max color
+        let max = (red>green) ? red : green;
+        max = (max>blue) ? max : blue;
+
+        if(max>1) {
+            red /= max;
+            green /= max;
+            blue /= max;
+        }
+
+
+        red = (red<0) ? 0 : red;
+        green = (green<0) ? 0 : green;
+        blue = (blue<0) ? 0 : blue;
 
         return new RGB(red, green, blue);
     }
@@ -162,7 +192,7 @@ class SpectrumToRGB {
      * @param {RGB} rgb  the rgb color to gamma correct
      * @return {RGB} the gamma corrected rgb
      */
-    private gammaCorrectRGB(cs: ColorSystem, rgb: RGB): RGB
+    public gammaCorrectRGB(cs: ColorSystem, rgb: RGB): RGB
     {
         return new RGB(this.gammaCorrect(cs, rgb.r), this.gammaCorrect(cs, rgb.g), this.gammaCorrect(cs, rgb.b));
     }
@@ -173,7 +203,7 @@ class SpectrumToRGB {
     * @param {RGB} rgb  the color to be normalized
     * @return {RGB} the gamma corrected rgb
     */
-    private normRGB(rgb: RGB): RGB
+    public normRGB(rgb: RGB): RGB
     {
         let red = rgb.r;
         let green = rgb.g;
@@ -204,21 +234,26 @@ class SpectrumToRGB {
         let yBar = 0;
         let zBar = 0;
         let xyzSum: number;
-        let reflectance: number;
-
+        let reflected: number;
+        let colorMatch: XYZ;
 
         for (let i = 0; i < spectrum.data.length; i++) {
             //Skip values outside the visibile range 380-780
             //that do not contribute to a color
             if(spectrum.data[i][0]>=380 && spectrum.data[i][0]<=780) {
-                let colorMatch = this.matchingFunction.match(spectrum.data[i][0]);
+                colorMatch = this.matchingFunction.match(spectrum.data[i][0]);
 
-                reflectance = spectrum.data[i][1];
-                xBar += reflectance * colorMatch.x;
-                yBar += reflectance * colorMatch.y;
-                zBar += reflectance * colorMatch.z;
+                reflected = spectrum.data[i][1] * this.illuminantSpectrum[(spectrum.data[i][0]-380)];
+                xBar += reflected * colorMatch.x;
+                yBar += reflected * colorMatch.y;
+                zBar += reflected * colorMatch.z;
             }
         }
+
+        xBar /= yBar;
+        zBar /= yBar;
+        yBar /= yBar;
+
         xyzSum = (xBar + yBar + zBar);
         let x = xBar / xyzSum;
         let y = yBar / xyzSum;
@@ -236,8 +271,7 @@ class SpectrumToRGB {
     {
         let cs = this.SMPTEsystem;
         let xyz = this.spectrumToXYZ(spectrum);
-        let rgb = this.xyzToRGB(cs, xyz);
-        return this.gammaCorrectRGB(cs, rgb);
+        return this.xyzToRGB(cs, xyz);
     }
 }
 

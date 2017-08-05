@@ -12,7 +12,7 @@ class Spectrum
      */
     constructor(data: number[][], isReflectance = true)
     {
-        this.data= this.normalize(data);
+        this.data = this.normalize(data);
 
         //if the data is not reflectance, i.e. absorbance
         //flip the data
@@ -44,8 +44,6 @@ class Spectrum
      */
     private toggleAbsorbReflect()
     {
-        let max = this.findMax(this.data);
-
         for(let i=0; i<this.data.length; i++) {
             this.data[i][1] = 1 - this.data[i][1];
         }

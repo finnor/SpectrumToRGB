@@ -1,5 +1,5 @@
 /**
- * Composite data type for an CIE XYZ color
+ * Composite data type for an CIE XYZ chromaticity
  */
 class XYZ
 {
