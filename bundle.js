@@ -64,7 +64,7 @@ var SpectrumToRGB =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 7);
+/******/ 	return __webpack_require__(__webpack_require__.s = 6);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -74,27 +74,89 @@ var SpectrumToRGB =
 "use strict";
 
 exports.__esModule = true;
+/**
+ * Composite data type for an CIE XYZ color
+ */
+var XYZ = (function () {
+    function XYZ(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+    return XYZ;
+}());
+exports["default"] = XYZ;
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+exports.__esModule = true;
+/**
+ * Class to represent a reflectance spectrum
+ */
 var Spectrum = (function () {
+    /**
+     * @constructor
+     * @param {number[][]} data  the input spectral data
+     * @param {Boolean} isReflectance  is the data reflectance or absorbance
+     */
     function Spectrum(data, isReflectance) {
         if (isReflectance === void 0) { isReflectance = true; }
-        this.data = data;
+        this.data = this.normalize(data);
+        //if the data is not reflectance, i.e. absorbance
+        //flip the data
         if (!isReflectance)
-            this.flipAbsRefl();
+            this.toggleAbsorbReflect();
     }
-    Spectrum.prototype.flipAbsRefl = function () {
-        var max = this.findMax();
+    /**
+     * Scales the spectrum so that the
+     * max reflectance/absorbance = 1
+     *
+     * @param  {number[][]} data  the input spectral data
+     * @return {number[][]} the normalized spectral data
+     */
+    Spectrum.prototype.normalize = function (data) {
+        var max = this.findMax(data);
+        for (var i = 0; i < data.length; i++) {
+            data[i][1] /= max;
+        }
+        return data;
+    };
+    /**
+     * Toggles the spectrum between absorbance and reflectance
+     * assumes that there is no emissive portion
+     * Reflectance = 1 - Absorbance
+     */
+    Spectrum.prototype.toggleAbsorbReflect = function () {
+        var max = this.findMax(this.data);
         for (var i = 0; i < this.data.length; i++) {
-            this.data[i][1] = max - this.data[i][1];
+            this.data[i][1] = 1 - this.data[i][1];
         }
     };
-    Spectrum.prototype.findMax = function () {
+    /**
+     * Returns the max absorbance/reflectance value
+     *
+     * @param  {number[][]} data  the spectral data to find the max for
+     * @return {number} the max value
+     */
+    Spectrum.prototype.findMax = function (data) {
         var max = 0;
-        for (var i = 0; i < this.data.length; i++) {
-            if (this.data[i][1] > max)
-                max = this.data[i][1];
+        for (var i = 0; i < data.length; i++) {
+            if (data[i][1] > max)
+                max = data[i][1];
         }
         return max;
     };
+    /**
+     * Tests if a portion of the spectrum is within
+     * the visible spectrum
+     *
+     * @return {boolean} is this spectrum visible
+     */
     Spectrum.prototype.isVisible = function () {
         for (var i = 0; i < this.data.length; i++) {
             if (this.data[i][0] >= 380 && this.data[i][0] <= 780 && this.data[i][1] > 0)
@@ -108,69 +170,37 @@ exports["default"] = Spectrum;
 
 
 /***/ }),
-/* 1 */
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-/*
-                Colour Rendering of Spectra
-
-                       by John Walker
-                  http://www.fourmilab.ch/
-
-                 Last updated: March 9, 2003
-
-           This program is in the public domain.
-
-    For complete information about the techniques employed in
-    this program, see the World-Wide Web document:
-
-             http://www.fourmilab.ch/documents/specrend/
-
-    The xyz_to_rgb() function, which was wrong in the original
-    version of this program, was corrected by:
-
-            Andrew J. S. Hamilton 21 May 1999
-            Andrew.Hamilton@Colorado.EDU
-            http://casa.colorado.edu/~ajsh/
-
-    who also added the gamma correction facilities and
-    modified constrain_rgb() to work by desaturating the
-    colour by adding white.
-
-    A program which uses these functions to plot CIE
-    "tongue" diagrams called "ppmcie" is included in
-    the Netpbm graphics toolkit:
-        http://netpbm.sourceforge.net/
-    (The program was called cietoppm in earlier
-    versions of Netpbm.)
-
-*/
 exports.__esModule = true;
 var ColorSystem_1 = __webpack_require__(4);
 var RGB_1 = __webpack_require__(5);
-var XYZ_1 = __webpack_require__(6);
+var XYZ_1 = __webpack_require__(0);
 var CIEColorMatchingFunction_1 = __webpack_require__(3);
+/**
+ * Class to convert a spectrum to an rgb
+ */
 var SpectrumToRGB = (function () {
     function SpectrumToRGB() {
+        //The class for a "function"(algorithm not jargon function)
+        //to calculate a the additive portion a wavelength
+        //contributes to an XYZ color
         this.matchingFunction = new CIEColorMatchingFunction_1["default"]();
-        /* White point chromaticities. */
-        this.IlluminantCx = 0.3101; /* For NTSC television */
+        //White point chromaticities
+        this.IlluminantCx = 0.3101; //For NTSC television
         this.IlluminantCy = 0.3162;
-        this.IlluminantD65x = 0.3127; /* For EBU and SMPTE */
+        this.IlluminantD65x = 0.3127; //For EBU and SMPTE
         this.IlluminantD65y = 0.3291;
-        this.IlluminantEx = 0.33333333; /* CIE equal-energy illuminant */
+        this.IlluminantEx = 0.33333333; //CIE equal-energy illuminant
         this.IlluminantEy = 0.33333333;
-        /*  Gamma of nonlinear correction.
-    
-            See Charles Poynton's ColorFAQ Item 45 and GammaFAQ Item 6 at:
-    
-               http://www.poynton.com/ColorFAQ.html
-               http://www.poynton.com/GammaFAQ.html
-    
-        */
-        this.GAMMA_REC709 = 0; /* Rec. 709 */
+        //Gamma correction system
+        //TODO move this to either an enum or
+        //     a class with the gamma correction function
+        this.GAMMA_REC709 = 0; //Rec. 709
+        //Color Systems
         this.NTSCsystem = new ColorSystem_1["default"]("NTSC", 0.67, 0.33, 0.21, 0.71, 0.14, 0.08, this.IlluminantCx, this.IlluminantCy, this.GAMMA_REC709);
         this.EBUsystem = new ColorSystem_1["default"]("EBU (PAL/SECAM)", 0.64, 0.33, 0.29, 0.60, 0.15, 0.06, this.IlluminantD65x, this.IlluminantD65y, this.GAMMA_REC709);
         this.SMPTEsystem = new ColorSystem_1["default"]("SMPTE", 0.630, 0.340, 0.310, 0.595, 0.155, 0.070, this.IlluminantD65x, this.IlluminantD65y, this.GAMMA_REC709);
@@ -178,24 +208,14 @@ var SpectrumToRGB = (function () {
         this.CIEsystem = new ColorSystem_1["default"]("CIE", 0.7355, 0.2645, 0.2658, 0.7243, 0.1669, 0.0085, this.IlluminantEx, this.IlluminantEy, this.GAMMA_REC709);
         this.Rec709system = new ColorSystem_1["default"]("CIE REC 709", 0.64, 0.33, 0.30, 0.60, 0.15, 0.06, this.IlluminantD65x, this.IlluminantD65y, this.GAMMA_REC709);
     }
-    /*                             XYZ_TO_RGB
-
-        Given an additive tricolour system CS, defined by the CIE x
-        and y chromaticities of its three primaries (z is derived
-        trivially as 1-(x+y)), and a desired chromaticity (XC, YC,
-        ZC) in CIE space, determine the contribution of each
-        primary in a linear combination which sums to the desired
-        chromaticity.  If the  requested chromaticity falls outside
-        the Maxwell  triangle (colour gamut) formed by the three
-        primaries, one of the r, g, or b weights will be negative.
-
-        Caller can use constrain_rgb() to desaturate an
-        outside-gamut colour to the closest representation within
-        the available gamut and/or norm_rgb to normalise the RGB
-        components so the largest nonzero component has value 1.
-
-    */
-    SpectrumToRGB.prototype.xyz_to_rgb = function (cs, xyz) {
+    /**
+     * Takes an xyz color and returns the rgb color in the input color system
+     *
+     * @param  {ColorSystem} cs  The color system to render the rgb color in
+     * @param  {XYZ} xyz  The xyz color to convert from
+     * @return {RGB} The converted rgb color
+     */
+    SpectrumToRGB.prototype.xyzToRGB = function (cs, xyz) {
         var xr, yr, zr, xg, yg, zg, xb, yb, zb;
         var xw, yw, zw;
         var rx, ry, rz, gx, gy, gz, bx, by, bz;
@@ -213,7 +233,7 @@ var SpectrumToRGB = (function () {
         xw = cs.xWhite;
         yw = cs.yWhite;
         zw = 1. - (xw + yw);
-        /* xyz -> rgb matrix, before scaling to white. */
+        //xyz -> rgb matrix, before scaling to white.
         rx = (yg * zb) - (yb * zg);
         ry = (xb * zg) - (xg * zb);
         rz = (xg * yb) - (xb * yg);
@@ -223,12 +243,12 @@ var SpectrumToRGB = (function () {
         bx = (yr * zg) - (yg * zr);
         by = (xg * zr) - (xr * zg);
         bz = (xr * yg) - (xg * yr);
-        /* White scaling factors.
-           Dividing by yw scales the white luminance to unity, as conventional. */
+        //White scaling factors.
+        //Dividing by yw scales the white luminance to unity, as conventional.
         rw = ((rx * xw) + (ry * yw) + (rz * zw)) / yw;
         gw = ((gx * xw) + (gy * yw) + (gz * zw)) / yw;
         bw = ((bx * xw) + (by * yw) + (bz * zw)) / yw;
-        /* xyz -> rgb matrix, correctly scaled to white. */
+        //xyz -> rgb matrix, correctly scaled to white.
         rx = rx / rw;
         ry = ry / rw;
         rz = rz / rw;
@@ -238,68 +258,61 @@ var SpectrumToRGB = (function () {
         bx = bx / bw;
         by = by / bw;
         bz = bz / bw;
-        /* rgb of the desired point */
+        //rgb of the desired point
         r = (rx * xyz.x) + (ry * xyz.y) + (rz * xyz.z);
         g = (gx * xyz.x) + (gy * xyz.y) + (gz * xyz.z);
         b = (bx * xyz.x) + (by * xyz.y) + (bz * xyz.z);
         var rgb = new RGB_1["default"](r, g, b);
-        this.constrain_rgb(rgb);
+        if (!this.insideGamut(rgb))
+            rgb = this.constrainRGB(rgb);
         return rgb;
     };
-    /*                            INSIDE_GAMUT
-
-         Test whether a requested colour is within the gamut
-         achievable with the primaries of the current colour
-         system.  This amounts simply to testing whether all the
-         primary weights are non-negative.
-
-    */
-    SpectrumToRGB.prototype.inside_gamut = function (rgb) {
+    /**
+     * Tests if the rgb color is inside the gamut achieveable
+     * where all component colors are positive
+     *
+     * @param  {RGB} rgb  the rgb color to test
+     * @return {boolean} is the color inside the color gamut
+     */
+    SpectrumToRGB.prototype.insideGamut = function (rgb) {
         return (rgb.r >= 0) && (rgb.g >= 0) && (rgb.b >= 0);
     };
-    /*                          CONSTRAIN_RGB
-
-        If the requested RGB shade contains a negative weight for
-        one of the primaries, it lies outside the colour gamut
-        accessible from the given triple of primaries.  Desaturate
-        it by adding white, equal quantities of R, G, and B, enough
-        to make RGB all positive.  The function returns 1 if the
-        components were modified, zero otherwise.
-
-    */
-    SpectrumToRGB.prototype.constrain_rgb = function (rgb) {
+    /**
+     * Adds white to a color until it is inside the gamut
+     *
+     * @param  {RGB} rgb  the rgb color to constrain; used as an inout parameter
+     * @return {RGB} The color constrained inside the gamut
+     */
+    SpectrumToRGB.prototype.constrainRGB = function (rgb) {
         var w;
-        /* Amount of white needed is w = - min(0, *r, *g, *b) */
-        w = (0 < rgb.r) ? 0 : rgb.r;
-        w = (w < rgb.g) ? w : rgb.g;
-        w = (w < rgb.b) ? w : rgb.b;
+        var red = rgb.r;
+        var green = rgb.g;
+        var blue = rgb.b;
+        //Amount of white needed is w = - min(0, red, green, blue)
+        w = (0 < red) ? 0 : red;
+        w = (w < green) ? w : green;
+        w = (w < blue) ? w : blue;
         w = -w;
-        /* Add just enough white to make r, g, b all positive. */
+        //Add just enough white to make red, green, blue all positive.
         if (w > 0) {
-            rgb.r += w;
-            rgb.g += w;
-            rgb.b += w;
-            return true; /* Colour modified to fit RGB gamut */
+            red += w;
+            green += w;
+            blue += w;
         }
-        return false; /* Colour within RGB gamut */
+        return new RGB_1["default"](red, green, blue);
     };
-    /*                          GAMMA_CORRECT_RGB
-
-        Transform linear RGB values to nonlinear RGB values. Rec.
-        709 is ITU-R Recommendation BT. 709 (1990) ``Basic
-        Parameter Values for the HDTV Standard for the Studio and
-        for International Programme Exchange'', formerly CCIR Rec.
-        709. For details see
-
-           http://www.poynton.com/ColorFAQ.html
-           http://www.poynton.com/GammaFAQ.html
-
-    */
-    SpectrumToRGB.prototype.gamma_correct = function (cs, c) {
+    /**
+     * Gamma corrects a single component color for a given color system
+     *
+     * @param {ColorSystem} cs  The color system to gamma correct for
+     * @param {number} c  the value of a component color to correct for
+     * @return {number} the gamma corrected value
+     */
+    SpectrumToRGB.prototype.gammaCorrect = function (cs, c) {
         var gamma;
         gamma = cs.gamma;
-        if (gamma == this.GAMMA_REC709) {
-            /* Rec. 709 gamma correction. */
+        if (gamma === this.GAMMA_REC709) {
+            //Rec. 709 gamma correction.
             var cc = 0.018;
             if (c < cc) {
                 c *= ((1.099 * Math.pow(cc, 0.45)) - 0.099) / cc;
@@ -309,53 +322,56 @@ var SpectrumToRGB = (function () {
             }
         }
         else {
-            /* Nonlinear colour = (Linear colour)^(1/gamma) */
+            //Nonlinear colour = (Linear colour)^(1/gamma)
             c = Math.pow(c, 1.0 / gamma);
         }
         return c;
     };
-    SpectrumToRGB.prototype.gamma_correct_rgb = function (cs, rgb) {
-        rgb.r = this.gamma_correct(cs, rgb.r);
-        rgb.g = this.gamma_correct(cs, rgb.g);
-        rgb.b = this.gamma_correct(cs, rgb.b);
-        return rgb;
+    /**
+     * Gamma corrects an rgb color for a given color system
+     *
+     * @param {ColorSystem} cs  The color system to gamma correct for
+     * @param {RGB} rgb  the rgb color to gamma correct
+     * @return {RGB} the gamma corrected rgb
+     */
+    SpectrumToRGB.prototype.gammaCorrectRGB = function (cs, rgb) {
+        return new RGB_1["default"](this.gammaCorrect(cs, rgb.r), this.gammaCorrect(cs, rgb.g), this.gammaCorrect(cs, rgb.b));
     };
-    /*                          NORM_RGB
-
-        Normalise RGB components so the most intense (unless all
-        are zero) has a value of 1.
-
-    */
-    SpectrumToRGB.prototype.norm_rgb = function (rgb) {
-        var max = (rgb.r > rgb.g) ? rgb.r : rgb.g;
-        max = (max > rgb.b) ? max : rgb.b;
+    /**
+     * Scales a color so the max component color has a value of 1
+     *
+     * @param {RGB} rgb  the color to be normalized
+     * @return {RGB} the gamma corrected rgb
+     */
+    SpectrumToRGB.prototype.normRGB = function (rgb) {
+        var red = rgb.r;
+        var green = rgb.g;
+        var blue = rgb.b;
+        //Find max color
+        var max = (red > green) ? red : green;
+        max = (max > blue) ? max : blue;
         if (max > 0) {
-            rgb.r /= max;
-            rgb.g /= max;
-            rgb.b /= max;
+            red /= max;
+            green /= max;
+            blue /= max;
         }
-        return rgb;
+        return new RGB_1["default"](red, green, blue);
     };
-    /*                          SPECTRUM_TO_XYZ
-
-        Calculate the CIE X, Y, and Z coordinates corresponding to
-        a light source with spectral distribution given by  the
-        function SPEC_INTENS, which is called with a series of
-        wavelengths between 380 and 780 nm (the argument is
-        expressed in meters), which returns emittance at  that
-        wavelength in arbitrary units.  The chromaticity
-        coordinates of the spectrum are returned in the x, y, and z
-        arguments which respect the identity:
-
-                x + y + z = 1.
-    */
-    SpectrumToRGB.prototype.spectrum_to_xyz = function (spectrum) {
+    /**
+     * Converts an input spectrum into a CIE XYZ color
+     *
+     * @param  {Spectrum} spectrum  The spectrum to convert from
+     * @return {XYZ} the xyz color representing the spectrum
+     */
+    SpectrumToRGB.prototype.spectrumToXYZ = function (spectrum) {
         var xBar = 0;
         var yBar = 0;
         var zBar = 0;
         var xyzSum;
         var reflectance;
         for (var i = 0; i < spectrum.data.length; i++) {
+            //Skip values outside the visibile range 380-780
+            //that do not contribute to a color
             if (spectrum.data[i][0] >= 380 && spectrum.data[i][0] <= 780) {
                 var colorMatch = this.matchingFunction.match(spectrum.data[i][0]);
                 reflectance = spectrum.data[i][1];
@@ -370,33 +386,21 @@ var SpectrumToRGB = (function () {
         var z = zBar / xyzSum;
         return new XYZ_1["default"](x, y, z);
     };
+    /**
+     * Entry point for class. Converts a spectrum to an rgb color
+     *
+     * @param  {Spectrum} spectrum the input spectrum to be converted
+     * @return {RGB} the rgb color the spectrum represents
+     */
     SpectrumToRGB.prototype.convert = function (spectrum) {
         var cs = this.SMPTEsystem;
-        var xyz = this.spectrum_to_xyz(spectrum);
-        var rgb = this.xyz_to_rgb(cs, xyz);
-        return this.gamma_correct_rgb(cs, rgb);
+        var xyz = this.spectrumToXYZ(spectrum);
+        var rgb = this.xyzToRGB(cs, xyz);
+        return this.gammaCorrectRGB(cs, rgb);
     };
     return SpectrumToRGB;
 }());
 exports["default"] = SpectrumToRGB;
-
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-exports.__esModule = true;
-var CIEColorMatch = (function () {
-    function CIEColorMatch(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-    return CIEColorMatch;
-}());
-exports["default"] = CIEColorMatch;
 
 
 /***/ }),
@@ -406,23 +410,13 @@ exports["default"] = CIEColorMatch;
 "use strict";
 
 exports.__esModule = true;
-var CIEColorMatch_1 = __webpack_require__(2);
+var XYZ_1 = __webpack_require__(0);
+/**
+ * Class to match a wavelength to a CIE xyz color
+ */
 var CIEColorMatchingFunction = (function () {
     function CIEColorMatchingFunction() {
-        /* CIE colour matching functions xBar, yBar, and zBar for
-           wavelengths from 380 through 780 nanometers, every 5
-           nanometers.  For a wavelength lambda in this range:
-    
-                cie_colour_match[(lambda - 380) / 5][0] = xBar
-                cie_colour_match[(lambda - 380) / 5][1] = yBar
-                cie_colour_match[(lambda - 380) / 5][2] = zBar
-    
-            To save memory, this table can be declared as floats
-            rather than doubles; (IEEE) float has enough
-            significant bits to represent the values. It's declared
-            as a double here to avoid warnings about "conversion
-            between floating-point types" from certain persnickety
-            compilers. */
+        //[[x-coordinate, y-coordinate, z-coordinate],...]
         this.cieColorMatch = [
             [0.0014, 0.0000, 0.0065], [0.0022, 0.0001, 0.0105], [0.0042, 0.0001, 0.0201],
             [0.0076, 0.0002, 0.0362], [0.0143, 0.0004, 0.0679], [0.0232, 0.0006, 0.1102],
@@ -453,10 +447,16 @@ var CIEColorMatchingFunction = (function () {
             [0.0001, 0.0000, 0.0000], [0.0001, 0.0000, 0.0000], [0.0000, 0.0000, 0.0000]
         ];
     }
+    /**
+     * Matches a given wavelength to an xyz color
+     *
+     * @param  {number} wavelength  the wavelength to get the color for
+     * @return {XYZ} the xyz color represented by the wavelength
+     */
     CIEColorMatchingFunction.prototype.match = function (wavelength) {
         var index = Math.round((wavelength - 380) / 5);
         var temp = this.cieColorMatch[index];
-        return new CIEColorMatch_1["default"](temp[0], temp[1], temp[2]);
+        return new XYZ_1["default"](temp[0], temp[1], temp[2]);
     };
     return CIEColorMatchingFunction;
 }());
@@ -470,12 +470,9 @@ exports["default"] = CIEColorMatchingFunction;
 "use strict";
 
 exports.__esModule = true;
-/*
-   A color system is defined by the CIE x and y coordinates of
-   its three primary illuminants and the x and y coordinates of
-   the white point.
-
-*/
+/**
+ * Composite data type for a color system
+ */
 var ColorSystem = (function () {
     function ColorSystem(name, xRed, yRed, xGreen, yGreen, xBlue, yBlue, xWhite, yWhite, gamma) {
         this.name = name;
@@ -501,18 +498,39 @@ exports["default"] = ColorSystem;
 "use strict";
 
 exports.__esModule = true;
+/**
+ * Composite data type for an RGB color
+ */
 var RGB = (function () {
     function RGB(r, g, b) {
         this.r = r;
         this.g = g;
         this.b = b;
     }
+    /**
+     * Getter that scales the red component
+     * to 0-255 range
+     *
+     * @return {number} scaled red
+     */
     RGB.prototype.getRed = function () {
         return Math.round(this.r * 255);
     };
+    /**
+     * Getter that scales the green component
+     * to 0-255 range
+     *
+     * @return {number} scaled green
+     */
     RGB.prototype.getGreen = function () {
         return Math.round(this.g * 255);
     };
+    /**
+     * Getter that scales the blue component
+     * to 0-255 range
+     *
+     * @return {number} scaled blue
+     */
     RGB.prototype.getBlue = function () {
         return Math.round(this.b * 255);
     };
@@ -527,28 +545,23 @@ exports["default"] = RGB;
 
 "use strict";
 
+/*
+    SpectrumToRGB
+    Adrian Flannery
+    https://github.com/finnor/SpectrumToRGB
+    http://finnor.github.io/
+
+    Modification of algorithm that calculates RGB color
+    from an emissive blackbody radiation spectrum
+    Colour Rendering of Spectra
+    by John Walker
+    http://www.fourmilab.ch/documents/specrend/
+    http://www.fourmilab.ch/
+*/
 exports.__esModule = true;
-var XYZ = (function () {
-    function XYZ(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-    return XYZ;
-}());
-exports["default"] = XYZ;
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-exports.__esModule = true;
-var Spectrum_1 = __webpack_require__(0);
+var Spectrum_1 = __webpack_require__(1);
 exports.Spectrum = Spectrum_1["default"];
-var SpectrumToRGB_1 = __webpack_require__(1);
+var SpectrumToRGB_1 = __webpack_require__(2);
 exports.Converter = SpectrumToRGB_1["default"];
 
 

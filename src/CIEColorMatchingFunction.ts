@@ -1,21 +1,11 @@
-import CIEColorMatch from "./CIEColorMatch";
+import XYZ from "./XYZ";
 
+/**
+ * Class to match a wavelength to a CIE xyz color
+ */
 class CIEColorMatchingFunction
 {
-    /* CIE colour matching functions xBar, yBar, and zBar for
-       wavelengths from 380 through 780 nanometers, every 5
-       nanometers.  For a wavelength lambda in this range:
-
-            cie_colour_match[(lambda - 380) / 5][0] = xBar
-            cie_colour_match[(lambda - 380) / 5][1] = yBar
-            cie_colour_match[(lambda - 380) / 5][2] = zBar
-
-        To save memory, this table can be declared as floats
-        rather than doubles; (IEEE) float has enough
-        significant bits to represent the values. It's declared
-        as a double here to avoid warnings about "conversion
-        between floating-point types" from certain persnickety
-        compilers. */
+    //[[x-coordinate, y-coordinate, z-coordinate],...]
     private cieColorMatch = [
         [0.0014,0.0000,0.0065], [0.0022,0.0001,0.0105], [0.0042,0.0001,0.0201],
         [0.0076,0.0002,0.0362], [0.0143,0.0004,0.0679], [0.0232,0.0006,0.1102],
@@ -46,11 +36,17 @@ class CIEColorMatchingFunction
         [0.0001,0.0000,0.0000], [0.0001,0.0000,0.0000], [0.0000,0.0000,0.0000]
     ];
 
-    public match(wavelength)
+    /**
+     * Matches a given wavelength to an xyz color
+     *
+     * @param  {number} wavelength  the wavelength to get the color for
+     * @return {XYZ} the xyz color represented by the wavelength
+     */
+    public match(wavelength: number): XYZ
     {
         let index = Math.round((wavelength-380)/5);
         let temp = this.cieColorMatch[index];
-        return new CIEColorMatch(temp[0], temp[1], temp[2]);
+        return new XYZ(temp[0], temp[1], temp[2]);
     }
 }
 

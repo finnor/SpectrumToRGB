@@ -1,21 +1,18 @@
-/*
-   A color system is defined by the CIE x and y coordinates of
-   its three primary illuminants and the x and y coordinates of
-   the white point.
-
-*/
+/**
+ * Composite data type for a color system
+ */
 class ColorSystem
 {
-    public name: string;                   /* Color system name */
-    public xRed: number;                   /* Red x, y */
+    public name: string;                   //Color system name
+    public xRed: number;                   //Red x, y
     public yRed: number;
-    public xGreen: number;                 /* Green x, y */
+    public xGreen: number;                 //Green x, y
     public yGreen: number;
-    public xBlue: number;                  /* Blue x, y */
+    public xBlue: number;                  //Blue x, y
     public yBlue: number;
-    public xWhite: number;                 /* White point x, y */
+    public xWhite: number;                 //White point x, y
     public yWhite: number;
-    public gamma: number;                  /* Gamma correction for system */
+    public gamma: number;                  //Gamma correction for system
 
     constructor(name: string, xRed: number, yRed: number,
         xGreen: number, yGreen: number,
