@@ -1,7 +1,7 @@
 /**
  * Composite data type for an RGB color
  */
-class RGB
+export default class RGB
 {
     public r: number;            //r component
     public g: number;            //g component
@@ -47,5 +47,3 @@ class RGB
         return Math.round(this.b*255);
     }
 }
-
-export default RGB;

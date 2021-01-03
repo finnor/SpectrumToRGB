@@ -1,7 +1,7 @@
 /**
  * Class to represent a reflectance spectrum
  */
-class Spectrum
+export default class Spectrum
 {
     public data: number[][];      //an array of [wavelengths, reflectance]
 
@@ -29,7 +29,7 @@ class Spectrum
      */
     private normalize(data: number[][]): number[][]
     {
-        let max = this.findMax(data);
+        const max = this.findMax(data);
         for(let i=0; i<data.length; i++) {
             data[i][1] /= max;
         }
@@ -81,5 +81,3 @@ class Spectrum
         return false;
     }
 }
-
-export default Spectrum;

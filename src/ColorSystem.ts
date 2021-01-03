@@ -1,7 +1,7 @@
 /**
  * Composite data type for a color system
  */
-class ColorSystem
+export default class ColorSystem
 {
     public name: string;                   //Color system name
     public xRed: number;                   //Red x, y
@@ -33,5 +33,3 @@ class ColorSystem
         this.gamma = gamma;
     }
 }
-
-export default ColorSystem;

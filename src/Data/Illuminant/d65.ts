@@ -1,4 +1,4 @@
-let spectrum = [
+export default [
     49.9755,
     50.4428,
     50.91,
@@ -401,5 +401,3 @@ let spectrum = [
     63.7251,
     63.3828,
 ];
-
-export default spectrum

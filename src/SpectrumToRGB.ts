@@ -3,12 +3,12 @@ import RGB from "./RGB";
 import XYZ from "./XYZ";
 import CIEColorMatchingFunction from "./CIEColorMatchingFunction";
 import Spectrum from "./Spectrum";
-import * as d65 from "./Data/Illuminant/d65";
+import d65 from "./Data/Illuminant/d65";
 
 /**
  * Class to convert a spectrum to an rgb
  */
-class SpectrumToRGB {
+export default class SpectrumToRGB {
 
     //The class for a "function"(algorithm not jargon function)
     //to calculate a the additive portion a wavelength
@@ -24,7 +24,7 @@ class SpectrumToRGB {
     private IlluminantEy = 0.33333333;
 
     //The illuminant spectrum
-    private illuminantSpectrum = d65.default;
+    private illuminantSpectrum = d65;
 
     //Gamma correction system
     //TODO move this to either an enum or
@@ -85,7 +85,7 @@ class SpectrumToRGB {
         return this.constrainRGBTruncate(new RGB(r, g, b));
     }
 
-   /**
+    /**
     * Tests if the rgb color is inside the gamut achieveable
     * where all component colors are positive
     *
@@ -97,7 +97,7 @@ class SpectrumToRGB {
         return (rgb.r >= 0) && (rgb.g >= 0) && (rgb.b >= 0);
     }
 
-   /**
+    /**
     * Adds white to a color until it is inside the gamut
     *
     * @param  {RGB} rgb  the rgb color to constrain; used as an inout parameter
@@ -155,7 +155,7 @@ class SpectrumToRGB {
         return new RGB(red, green, blue);
     }
 
-   /**
+    /**
     * Gamma corrects a single component color for a given color system
     *
     * @param {ColorSystem} cs  The color system to gamma correct for
@@ -170,7 +170,7 @@ class SpectrumToRGB {
 
         if (gamma===this.GAMMA_REC709) {
             //Rec. 709 gamma correction.
-            let cc = 0.018;
+            const cc = 0.018;
 
             if (c < cc) {
                 c *= ((1.099 * Math.pow(cc, 0.45)) - 0.099) / cc;
@@ -197,7 +197,7 @@ class SpectrumToRGB {
         return new RGB(this.gammaCorrect(cs, rgb.r), this.gammaCorrect(cs, rgb.g), this.gammaCorrect(cs, rgb.b));
     }
 
-   /**
+    /**
     * Scales a color so the max component color has a value of 1
     *
     * @param {RGB} rgb  the color to be normalized
@@ -222,7 +222,7 @@ class SpectrumToRGB {
         return new RGB(red, green, blue);
     }
 
-   /**
+    /**
     * Converts an input spectrum into a CIE XYZ color
     *
     * @param  {Spectrum} spectrum  The spectrum to convert from
@@ -255,9 +255,9 @@ class SpectrumToRGB {
         yBar /= yBar;
 
         xyzSum = (xBar + yBar + zBar);
-        let x = xBar / xyzSum;
-        let y = yBar / xyzSum;
-        let z = zBar / xyzSum;
+        const x = xBar / xyzSum;
+        const y = yBar / xyzSum;
+        const z = zBar / xyzSum;
         return new XYZ(x, y, z);
     }
 
@@ -269,10 +269,8 @@ class SpectrumToRGB {
      */
     public convert(spectrum: Spectrum): RGB
     {
-        let cs = this.SMPTEsystem;
-        let xyz = this.spectrumToXYZ(spectrum);
+        const cs = this.SMPTEsystem;
+        const xyz = this.spectrumToXYZ(spectrum);
         return this.xyzToRGB(cs, xyz);
     }
 }
-
-export default SpectrumToRGB;

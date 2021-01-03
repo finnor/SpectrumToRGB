@@ -1,7 +1,7 @@
 /**
  * Composite data type for an CIE XYZ chromaticity
  */
-class XYZ
+export default class XYZ
 {
     public x: number;        //x-coordinate
     public y: number;        //y-coordinate
@@ -14,5 +14,3 @@ class XYZ
         this.z = z;
     }
 }
-
-export default XYZ;

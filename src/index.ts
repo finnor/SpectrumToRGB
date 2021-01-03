@@ -2,7 +2,6 @@
     SpectrumToRGB
     Adrian Flannery
     https://github.com/finnor/SpectrumToRGB
-    http://finnor.github.io/
 */
 
 import Spectrum from "./Spectrum";
